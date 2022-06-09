@@ -1,0 +1,14 @@
+torchsummary
+tqdm
+setproctitle
+pytorch-lightning
+pandas
+sklearn
+matplotlib
+netCDF4
+pygrib
+torchvision
+seaborn
+xarray
+imageio
+einops
