@@ -77,6 +77,7 @@ def parse_args(manual_input=None):
                         help='experiment name used for gen_nc')  # should only be used for gen_nc
     # common.add_argument('--debug', help='turn on debugging print', action='store_true')
     common.add_argument('--interpolate_aws', default=False, action="store_true")
+    common.add_argument('--auxiliary_loss', default=0.0, type = float, help='F1 score loss for rain and heavy rain')
 
     unet = parser.add_argument_group('unet related')
     unet.add_argument('--embedding_dim', default=8, type=int, help='dimension of embedding of per time')
@@ -313,13 +314,24 @@ def set_model(sample, device, args,
                                  device=device,
                                  num_classes=args.num_classes,
                                  experiment_name=experiment_name)
+    
+    if args.auxiliary_loss !=0.:
+        dice_criterion = DiceLoss(args=args,
+                                 device=device,
+                                 num_classes=args.num_classes,
+                                 balance = args.auxiliary_loss,
+                                 experiment_name=experiment_name)
+    elif args.auxiliary_loss ==0.:
+        dice_criterion = None
+    else:
+        raise NotImplementedError
 
     if finetune:
         checkpoint = torch.load(model_path)
         model.load_state_dict(checkpoint, strict=False)
 
     # model = DataParallel(model)
-    return model, criterion
+    return model, criterion, dice_criterion
 
 
 def set_optimizer(model, args):

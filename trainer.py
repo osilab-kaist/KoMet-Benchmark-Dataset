@@ -16,13 +16,14 @@ __all__ = ['NIMSTrainer']
 
 
 class NIMSTrainer:
-    def __init__(self, model, criterion, optimizer, scheduler, device, train_loader, valid_loader, test_loader,
+    def __init__(self, model, criterion, dice_criterion, optimizer, scheduler, device, train_loader, valid_loader, test_loader,
                  experiment_name, args, normalization=None):
         self.args = args
 
         self.model = model
         self.model_name = args.model
         self.criterion = criterion
+        self.dice_criterion = dice_criterion
         self.optimizer = optimizer
         self.scheduler = scheduler
         self.device = device
@@ -192,6 +193,8 @@ class NIMSTrainer:
 
             # Note, pred_labels will be removed soon
             loss, pred_labels, target_labels = self.criterion(output, target, timestamps, mode=mode)
+            if self.dice_criterion !=None:
+                loss += self.dice_criterion(pred_labels, target_labels, self.device)
             _, predictions = output.detach().cpu().topk(1, dim=1, largest=True,
                                                         sorted=True)  # (batch_size, height, width)
             step_confusion, step_metrics_by_threshold = compile_metrics(data_loader.dataset, predictions.numpy(),

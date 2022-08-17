@@ -2,7 +2,7 @@
 
 > Benchmark Dataset for Precipitation Forecasting by Post-Processing the Numerical Weather Prediction
 
-This repository contains the data and code to reproduce all the analyses in the paper. If you need something immediately
+This repository contains the data and code to reproduce all the analyses in the paper ([Link](https://arxiv.org/abs/2206.15241)). If you need something immediately
 or find it confusing, please open a GitHub issue or email us. We recommend reading the paper, appendix, and below
 descriptions thoroughly before running the code. Future code modifications and official developments will take place
 here.

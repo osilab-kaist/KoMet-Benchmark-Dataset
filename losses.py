@@ -4,9 +4,10 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.autograd import Variable
 
 
-__all__ = ['CrossEntropyLoss']
+__all__ = ['CrossEntropyLoss', 'DiceLoss']
 
 
 class ClassificationStat(nn.Module):
@@ -121,3 +122,28 @@ class CrossEntropyLoss(ClassificationStat):
         loss = torch.mean(torch.mean(loss, dim=1))
 
         return loss, pred_labels, target_labels
+    
+class DiceLoss(nn.Module):
+    def __init__(self, args, device, num_classes, balance, experiment_name=None):
+        super().__init__()
+        self.args = args
+        self.num_classes = num_classes
+        self.reference = args.reference
+        self.alpha = 0.75
+        self.device = device
+        self.balance = balance
+
+        
+    def forward(self, pred_labels, target_labels, device):
+        confusion_matrix = Variable(torch.zeros((self.num_classes, self.num_classes)), requires_grad=True).to(self.device)
+    
+        for i in range(pred_labels.shape[1]):
+            confusion_matrix[target_labels[0, i], pred_labels[0, i]] += (target_labels[0, i]==pred_labels[0, i]).sum()
+        
+        dice = 0.0
+        for clas_num in range(1, self.num_classes):
+            tp, fn, fp = confusion_matrix[clas_num, clas_num], confusion_matrix[clas_num, :].sum()-confusion_matrix[clas_num, clas_num], confusion_matrix[:, clas_num].sum()-confusion_matrix[clas_num, clas_num]
+            dice += (2 * tp) / (2*tp + fn + fp + 1e-6)
+        dice /= (self.num_classes-1)
+
+        return self.balance * (1 - dice ** self.alpha)

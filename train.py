@@ -66,7 +66,7 @@ def main(args):
                          'min_values': min_values}
 
     nwp_sample, gt_sample, _ = augmented_dataset[0]  # samples to determine shape of tensor
-    model, criterion = set_model(nwp_sample, device, args)
+    model, criterion, dice_criterion = set_model(nwp_sample, device, args)
 
     train_dataset, _, _ = cyclic_split(augmented_dataset)
     _, valid_dataset, test_dataset = cyclic_split(dataset)
@@ -102,7 +102,7 @@ def main(args):
         print("No Rain Resample Ratio", args.no_rain_resample_ratio)
 
     optimizer, scheduler = set_optimizer(model, args)
-    nims_trainer = NIMSTrainer(model, criterion, optimizer, scheduler, device,
+    nims_trainer = NIMSTrainer(model, criterion, dice_criterion, optimizer, scheduler, device,
                                train_loader, valid_loader, test_loader, experiment_name,
                                args, normalization=normalization)
     nims_trainer.train()
