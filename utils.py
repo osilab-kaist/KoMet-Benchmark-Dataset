@@ -297,6 +297,15 @@ def set_model(sample, device, args,
                        center_crop=False,
                        center=None,
                        pred_hour=1)
+    elif args.model == 'point':
+        model = precipitation_point(input_data=args.input_data,
+                       window_size=args.window_size,
+                       num_cls=args.num_classes,
+                       in_channels=sample.shape[1],
+                       start_dim=args.start_dim,
+                       center_crop=False,
+                       center=None,
+                       pred_hour=1)
     else:
         raise ValueError('{} is not a valid argument for `args.model`'.format(args.model))
 
