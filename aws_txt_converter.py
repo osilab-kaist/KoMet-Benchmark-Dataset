@@ -1,3 +1,7 @@
+"""
+Module to convert AWS observations of `.txt` format to numpy format based on coordinate information in
+`aws_coordinates/`.
+"""
 import argparse
 import os
 import re
@@ -53,15 +57,16 @@ if __name__ == '__main__':
     if not os.path.isdir(obs_txt_dir):
         raise Exception("AWS directory for year {} does not exist".format(start_date.year))
 
+    # List of AWS observation txt file path basenames
     obs_txt_list = sorted([f for f in os.listdir(obs_txt_dir) if
                            f.split('_')[3][:-8] >= '{}'.format(start_date.strftime("%Y%m%d")) and
                            f.split('_')[3][:-8] <= '{}'.format(end_date.strftime("%Y%m%d"))])
 
+    # Process each observation file (corresponding to a single target timestamp)
     pbar = tqdm(obs_txt_list)
     for obs_txt in pbar:
         # Get target path
         # Convert KST time to UTC time
-
         match = re_fname.search(obs_txt)
         if not match:
             raise AssertionError('Invalid AWS txt path: ', obs_txt)
@@ -86,6 +91,7 @@ if __name__ == '__main__':
         if args.input_data == 'gdaps_kim':
             result_array = np.full([50, 65], -9999., dtype=np.float32)
 
+        # Parse observation values and copy to numpy array
         with open(os.path.join(obs_txt_dir, obs_txt), 'r', encoding='euc-kr') as f:
             for line in f:
                 if line.startswith('#'):
@@ -98,5 +104,6 @@ if __name__ == '__main__':
                 stn_x, stn_y = get_station_coordinate(codi_aws_df, stn_id)
                 result_array[stn_y, stn_x] = one_hour_rain
 
+        # Save observations to `.npy` file
         with open(target_path, 'wb') as npyf:
             np.save(npyf, result_array)

@@ -15,25 +15,22 @@ __all__ = ['BaseDataset', 'GdapsKimBaseDataset', 'GdapsUmBaseDataset', 'AwsBaseD
 
 class BaseDataset:
     """
-    다양한 수치모델 (NWP)과 AWS 데이터를 각각 ndarray 형태로 쉽게 접근하기 위한 추상 클래스입니다. 주요 역할은 다음과 같습니다:
+    An abstract class for easy access to NWP and AWS data in the form of `np.ndarray`s. Main features include:
 
-    - 주어진 데이터 관련 클래스 속성을 바탕으로 데이터 경로를 모두 파악하고 `self.data_path_dict`에 dictionary 형태로 정리합니다.
-      이때 사용되는 클래스 속성은 다음과 같습니다:
+    - Scan data directories based on the following class attributes below and store paths as a dictionary
+      in `self.data_path_dict`.
+      - `data_path_glob`: glob expression to find (potential) data paths
+      - `data_path_regex`: regular expression to extract year, month, day, hour, lead_time info from data path
+    - `load_array()`: load NWP or AWS sample as `np.ndarray` based on the supplied target time.
 
-      - `data_path_glob`: 데이터 path를 모두 찾아내는 glob expression (glob 모듈 참고)
-      - `data_path_regex`: 데이터 path에서 year, month, day, hour, lead_time 정보를 추출하는 정규표현식
+    ## Some Terminology
 
-    - `load_array()` 함수의 인자로 NWP 예측 (혹은 AWS 관측) 시점만 넘겨주면 해당 예측/관측 데이터를 ndarray 형태로 불러옵니다.
+   - `origin`: for NWPs, the time at which simulations are executed. For AWS, the time of the observation.
+               I.e., `datetime(year, month, day, hour=utc)`.
+   - `lead_time`: for NWPs, the time between origin and target time (in hours). For AWS, leave as 0.
+   - `target`: the target time of the prediction or observation. I.e., `origin + timedelta(hours=lead_time)`.
 
-    ## 용어
-
-    - `origin`: 수치모델에서 예측을 수행하는 현재 시점을 말하며, `datetime(year, month, day, hour=utc)`로 결정됩니다.
-    - `lead_time`: 수치모델에서 `origin` 기준 몇시간 후를 예측하고자 하는지를 말합니다.
-    - `target`: 수치모델에서 예측하고자 하는 시점을 말하며, `origin + timedelta(hours=lead_time)`로 결정됩니다.
-
-    AWS 데이터의 경우, 현재 관측값만 존재하므로 `lead_time=0`을 사용하여 `origin` 시점에서 현재 관측한 값을 불러올 수 있습니다.
-
-    ## 사용 예시 (GdapsKimBaseDataset)
+    ## Usage Example (GdapsKimBaseDataset)
 
     ```python
     utc = 6
@@ -42,16 +39,17 @@ class BaseDataset:
     plt.imshow(feature_map[0])  # map of rain at 2020/07/01 3:00PM predicted at 6:00AM
     ```
 
-    ## 주요 속성
+    ## Major Attributes
 
-    - `data_path_dict`: 각각의 target 시점을 그에 해당하는 데이터 path로 대응시키는 dictionary입니다.
+    - `data_path_dict`: a dictionary that maps target timestamps to data paths
 
-      - key: `(origin: datetime, lead_time: int)` 형태의 tuple로, target 시점을 가르킵니다.
-      - value: `List[str]` 형태로, key가 가르키는 시점에 해당하는 데이터를 담은 파일 path를 리스트로 저장합니다.
+      - key: the target timestamp in the form of `(origin: datetime, lead_time: int)`
+      - value: the list of all data paths that correspond to the key in the form of `List[str]`
 
-        - Q. 왜 리스트 형태?
+        - Q. can there be multiple paths for a single timestamp?
+        - A. in the case of GDAPS-KIM, Unis and Pres variables are saved in different files, therefore there are
+             two files that correspond to a particular target timestamp.
         - A. 예를 들어, GDAPS-KIM 모델에서는 단일면, 등압면 데이터가 각기 다른 파일에 저장되어 있기 때문에, 특정 target 시점에 해당하는 path가
-             두 개씩 존재합니다. 또 다른 예로, GDAPS-UM 모델에서는 예측값이 모두 하나의 파일에 저장되기 때문에 path가 하나만 존재합니다.
     """
     dataset_dir = None  # e.g., 'GDPSKIM'
     data_path_glob: str = None  # e.g., '**/*.nc'
@@ -59,10 +57,9 @@ class BaseDataset:
 
     def __init__(self, root_dir: str, variable_filter: str = None):
         """
-        :param root_dir: `dataset_dir`을 담고 있는 최상위 경로
-        :param variable_filter: 수치모델에서 불러오고자 하는 변수를 지정하는 string입니다. string의 형태는 자식 클래스의
-          `load_array` 구현에 따라 달라집니다. E.g., `GdapsKimBaseDataset`에서는 comma-separated string 형태로 변수명을
-          지정하면 됩니다.
+        :param root_dir: the root directory that contains `dataset_dir`
+        :param variable_filter: the string that specifies which variables to load. The format is determined by the
+                                implementation of `load_array`.
         """
         self._verify_class_attributes()
         self.root_dir = root_dir
@@ -79,17 +76,18 @@ class BaseDataset:
     @abstractmethod
     def load_array(self, origin: datetime, lead_time: int, return_variables: bool = False) -> _ret:
         """
-        수치모델에서 origin 시간 기준 lead_time 시간 후에 예측한 feature map을 ndarray 형태로 반환합니다. AWS의 경우,
-        `lead_time=0`만 사용 가능하며, origin 시간 기준 관측된 정보를 반환합니다.
+        For NWPs, the feature map of the prediction made at `origin` targeting +`lead_time` hours is returned in
+        `np.ndarray` format. For AWS, use `lead_time=0` to load observations made at `origin`.
 
-        본 함수는 추상 함수로, 자식 클래스에서 개별 데이터 파일의 형태에 맞추어 구현해야 합니다. 주로 `data_path_dict`를 참조하여 해당 시점의
-        데이터 파일 path(들)을 얻고 파일을 파싱하여 ndarray 형태로 뽑아냅니다.
+        This is an abstract method. You must provide an implementation for child classes based on the format of the
+        actual underlying dataset files. You should reference the `data_path_dict` attribute to obtain the
+        data paths corresponding to the supplied target time and parse the files to extract feature maps in
+        `np.ndarray` format.
 
-        :param origin: 수치모델에서 예측을 실행하는 시점을 말합니다. I.e., `datetime(year, month, day, utc)`.
-          GMT 시간대 기준으로 사용 요망.
-        :param lead_time: 수치모델에서 origin 기준 몇시간 후를 예측하고자 하는지 지정합니다. AWS의 경우, `lead_time=0`만 사용 가능.
-        :param return_variables: FxHxW 형태의 출력 array에서 각각의 F dimension에 해당하는 변수 이름을 리스트 형태로
-            추가로 반환할지 여부. True 시, `(feature_map: np.ndarray, variables: List)` 형태로 출력이 됩니다.
+        :param origin: for NWPs, the time at which simulations are executed. For AWS, the time of the observation.
+                       I.e., `datetime(year, month, day, hour=utc)`.
+        :param lead_time: for NWPs, the time between origin and target time (in hours). For AWS, leave as 0.
+        :param return_variables: whether to return the list of variables included in the resulting feature map.
         :return:
         """
         raise NotImplementedError
@@ -148,6 +146,9 @@ class BaseDataset:
 
 
 class GdapsKimBaseDataset(BaseDataset):
+    """
+    Implementation of BaseDataset corresponding to the data format of GDAPS-KIM.
+    """
     dataset_dir = 'GDPS_KIM'
     data_path_glob = os.path.join('**', '*.nc')
     data_path_regex = '.*(?P<year>\d{4})(?P<month>\d{2})/(?P<day>\d{2})/(?P<hour>\d{2})/.*ft(?P<lead_time>\d{3})\.nc'
@@ -269,75 +270,6 @@ class GdapsKimBaseDataset(BaseDataset):
         return nc.Dataset(paths[0])
 
 
-class GdapsUmBaseDataset(BaseDataset):
-    """
-    GDPS_UM_NPY 저장 형태 -> (변수, 데이터) shape = (253, 2)
-    인덱스로 접근해서 변수를 불러오는 형식입니다.
-    default_variables외의 변수를 사용하고자 할 때 변수명에 해당하는 인덱스(변수번호 - 1)를 확인해야합니다.
-    
-    현재 사용 변수
-    Temperature (85000, 70000, 50000) - 변수번호 (140, 143,147)
-    Relative humidity (85000, 70000, 50000) - 변수번호 (207, 210, 214)
-    rain - 변수번호 (1, 15) 두 변수 합쳐서 사용 (누적되는 지 확인 필요)
-    Specific humidity (1.5m) - 변수번호 (6)
-    Relative humidity (1.5m) - 변수번호 (7)
-    Temperature (1.5m) - 변수번호 (5)
-    Temperature (surface) - 변수번호 (248)
-    Pressure (surface) - 변수번호 (253)
-    """
-    dataset_dir = 'GDPS_UM_NPY_FW'
-    data_path_glob = os.path.join('**', '*.npy')
-    data_path_regex = '.*gdps_um_(?P<year>\d{4})(?P<month>\d{2})(?P<day>\d{2})(?P<hour>\d{2})_f(?P<lead_time>\d{3}).*.npy'
-
-    default_variables = [139, 142, 146, 206, 209, 213, 0, 14, 6, 4, 252, 18]
-
-    def __init__(self, root_dir: str, variable_filter: str = None):
-        if variable_filter is None:
-            variable_filter = self.default_variables
-        super().__init__(root_dir, variable_filter)
-
-    def load_array(self, origin: datetime, lead_time: int, return_variables=False):
-        feature_maps = []
-        variables_used = []
-        variables = self.variable_filter
-
-        # current_rain = self.get_feature_array(origin, lead_time, 0).transpose() + self.get_feature_array(origin, lead_time, 14).transpose()
-        current_rain = self.get_feature_array(origin, lead_time, 0) + self.get_feature_array(origin, lead_time, 14)
-        feature_maps.append(current_rain)
-        variables_used.extend([0, 14])
-
-        # Retrieve feature maps based on selected variables
-        for v in variables:
-            if v >= 0 and v <= 252:
-                if v == 0 or v == 14:
-                    continue
-                # feature_maps.append(self.get_feature_array(origin, lead_time, v).transpose())
-                feature_maps.append(self.get_feature_array(origin, lead_time, v))
-                variables_used.append(v)
-            else:
-                raise Exception('Invalid variable: {}'.format(v))
-
-        array = np.stack(feature_maps, axis=0).transpose([0, 2, 1])
-        if return_variables:
-            return array, variables_used
-        else:
-            return array
-
-    def get_feature_array(self, origin: datetime, lead_time: int, index: int):
-        paths = self.data_path_dict[(origin, lead_time)]
-        tag = 'feature_{:03d}'.format(index)
-        for path in paths:
-            if tag in path:
-                return np.load(path)
-        # If not found
-        raise ValueError(
-            'Could not find UM data from origin={}, lead_time={}, feature={}'.format(origin, lead_time, index))
-
-    def _verify_data_path_dict(self, data_path_dict):
-        if len(data_path_dict) == 0:
-            raise Exception('No data found (regardless of dates)')
-
-
 class AwsBaseDataset(BaseDataset):
     dataset_dir = None  # NWP model must be specified in subclass
     data_path_glob = os.path.join('**', '*.npy')
@@ -374,10 +306,6 @@ class AwsBaseDatasetForGdapsKim(AwsBaseDataset):
     dataset_dir = 'AWS_GDPS_KIM_GRID'
 
 
-class AwsBaseDatasetForGdapsUm(AwsBaseDataset):
-    dataset_dir = 'AWS_GDPS_UM_GRID'
-
-
 def print_dataset_info(dataset: BaseDataset):
     print('Data Paths (subset):')
     print('-' * 80)
@@ -395,7 +323,7 @@ def print_dataset_info(dataset: BaseDataset):
 
 
 def main():
-    root_dir = '/home/osilab12/ssd4'
+    root_dir = '/data/nims'
     variable_filter = 'rain, hpbl, pbltype, psl, tsfc, topo, q2m, T:850, T:700, T:500, uv:850, uv:700, uv:500'
     dataset = GdapsKimBaseDataset(root_dir, variable_filter)
     print('GdapsKimBaseDataset Test'.center(40).center(80, '='))
@@ -407,19 +335,7 @@ def main():
     print()
     print()
 
-    root_dir = '/home/osilab12/ssd4'
-    variable_filter = [139, 142, 146, 206, 209, 213, 0, 14, 5, 6, 4, 247, 252]
-    dataset = GdapsUmBaseDataset(root_dir, variable_filter)
-    print('GdapsUmBaseDataset Test'.center(40).center(80, '='))
-    print_dataset_info(dataset)
-
-    print()
-    print()
-    print()
-    print()
-    print()
-
-    root_dir = '/home/osilab12/ssd4'
+    root_dir = '/data/nims'
     dataset = AwsBaseDatasetForGdapsKim(root_dir)
     print('AwsBaseDatasetForGdapsKim Test'.center(40).center(80, '='))
     print_dataset_info(dataset)

@@ -1,3 +1,7 @@
+"""
+Evaluation module. Refer to `notebooks/evaluation_example.ipynb` on examples.
+"""
+
 from collections import defaultdict
 from datetime import datetime
 from typing import Tuple, Dict
@@ -35,6 +39,9 @@ def evaluate_model(model: nn.Module, data_loader, thresholds, criterion, device,
     total_loss = 0
     total_samples = 0
 
+    model.eval()
+
+    # Run inference on single epoch
     confusion = np.zeros((n_classes, n_classes), dtype=np.int)
     metrics_by_threshold = defaultdict(list)
     for i, (images, target, t) in enumerate(tqdm(data_loader)):

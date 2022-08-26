@@ -5,9 +5,8 @@ from typing import List, Tuple, Dict
 import numpy as np
 import pandas as pd
 import torch
-from torch.utils.data import Subset
-
 from data.dataset import StandardDataset
+from torch.utils.data import Subset
 
 
 def compile_metrics(dataset: StandardDataset, predictions: np.ndarray, timestamps: List,
@@ -67,62 +66,10 @@ def compile_metrics(dataset: StandardDataset, predictions: np.ndarray, timestamp
     return confusion_matrix, binary_metrics_by_threshold
 
 
-def get_binary_confusion_matrix_dict(confusion_matrix: np.ndarray, threshold_index: int):
-    """
-    Deprecated (as of 220509)
-    Multi-class confusion matrix를 주어진 threshold_index에 대해 2x2 binary matrix로 변환합니다.
-
-    :param confusion_matrix:
-    :param threshold_index:
-    :return:
-    """
-    assert type(confusion_matrix) != pd.DataFrame, 'you must pass a numpy array'
-    i = threshold_index
-    binary_cm = np.zeros([2, 2])  # actual x pred (0=False, 1=True)
-
-    binary_cm[1, 1] = confusion_matrix[i:, i:].sum()  # true positive (hit)
-    binary_cm[0, 0] = confusion_matrix[:i, :i].sum()  # true negative (correct negative)
-    binary_cm[1, 0] = confusion_matrix[i:, :i].sum()  # false negative (miss)
-    binary_cm[0, 1] = confusion_matrix[:i, i:].sum()  # false positive (false alarm)
-
-    return {
-        'hit': binary_cm[1, 1].sum(),  # true positive (hit)
-        'miss': binary_cm[1, 0].sum(),  # false negative (miss)
-        'fa': binary_cm[0, 1].sum(),  # false positive (false alarm)
-        'cn': binary_cm[0, 0].sum(),  # true negative (correct negative)
-    }
-
-
-def compute_measures_for_confusion_dict(confusion_dict, in_place=True):
-    """
-    Deprecated (as of 220504) - you should use DataFrames when working with measures.
-    Use `compute_measures_for_dataframe` instead.
-
-    get_confusion_dict에서 출력한 dict를 바탕으로 각종 성능 measure를 계산합니다.
-
-    :param confusion_dict:
-    :param in_place: True 시, 기존 dict에 결과를 추가합니다
-    :return:
-    """
-    d = confusion_dict
-    hit, miss, fa, cn = d['hit'], d['miss'], d['fa'], d['cn']
-
-    measures = {
-        'acc': (hit + cn) / (hit + miss + fa + cn),  # accuracy
-        'pod': hit / (hit + miss),  # probability of detection
-        'csi': hit / (hit + miss + fa),  # critical success index
-        'far': fa / (hit + fa),  # false alarm ratio
-        'bias': (hit + fa) / (hit + miss),  # bias
-    }
-
-    if in_place:
-        d.update(measures)
-        return d
-    else:
-        return measures
-
-
 def compute_evaluation_metrics(df: pd.DataFrame):
+    """
+    Compute evaluation metrics in-place for dataframe containing binary confusion matrix.
+    """
     df['acc'] = (df['hit'] + df['cn']) / (df['hit'] + df['miss'] + df['fa'] + df['cn'])  # accuracy
     df['pod'] = df['hit'] / (df['hit'] + df['miss'])  # probability of detection
     df['far'] = df['fa'] / (df['hit'] + df['fa'])  # false alarm ratio

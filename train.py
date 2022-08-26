@@ -25,18 +25,15 @@ def main(args):
         print("{} - {}".format(start.strftime("%Y-%m-%d"), end.strftime("%Y-%m-%d")))
     print("#" * 80)
 
-    # Train dataset
-    dataset_class = get_dataset_class(args.input_data)
+    # Load transforms for x, y, and augmented y. By default, augmentation for x is not considered.
     transform = transforms.Compose([
         ToTensor(),
     ])
-
     target_transform_list = [
         ToTensor(),
         ClassifyByThresholds(args.rain_thresholds),
     ]
     target_transform = transforms.Compose(target_transform_list)
-
     augmented_target_transform_list = [
         ToTensor(),
         ClassifyByThresholds(args.rain_thresholds),
@@ -52,6 +49,7 @@ def main(args):
         augmented_target_transform_list.append(UndersampleGlobal(args.global_sampling_rate))
     augmented_target_transform = transforms.Compose(augmented_target_transform_list)
 
+    # Load `StandardDataset`s
     dataset = load_dataset_from_args(args, transform=transform, target_transform=target_transform)
     augmented_dataset = load_dataset_from_args(args, transform=transform, target_transform=augmented_target_transform)
 
@@ -68,6 +66,7 @@ def main(args):
     nwp_sample, gt_sample, _ = augmented_dataset[0]  # samples to determine shape of tensor
     model, criterion, dice_criterion = set_model(nwp_sample, device, args)
 
+    # Apply data splits and load `DataLoader`
     train_dataset, _, _ = cyclic_split(augmented_dataset)
     _, valid_dataset, test_dataset = cyclic_split(dataset)
     train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers,
@@ -77,6 +76,7 @@ def main(args):
     test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.num_workers,
                              pin_memory=True)
 
+    # Apply heavy-rain specific strategies
     if args.target_precipitation == 'heavy':  # Heavy Rain Case
         point_cnt_dict = {i: 0 for i in list(range(1 + len(args.rain_thresholds))) + [-9999]}
 
@@ -101,6 +101,7 @@ def main(args):
             args.no_rain_resample_ratio = None
         print("No Rain Resample Ratio", args.no_rain_resample_ratio)
 
+    # Train model
     optimizer, scheduler = set_optimizer(model, args)
     nims_trainer = NIMSTrainer(model, criterion, dice_criterion, optimizer, scheduler, device,
                                train_loader, valid_loader, test_loader, experiment_name,

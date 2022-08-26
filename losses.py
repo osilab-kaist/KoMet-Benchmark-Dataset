@@ -1,5 +1,3 @@
-import warnings
-
 import numpy as np
 import torch
 import torch.nn as nn
@@ -11,6 +9,9 @@ __all__ = ['CrossEntropyLoss', 'DiceLoss']
 
 
 class ClassificationStat(nn.Module):
+    """
+    Superclass that provides functionality for evaluation based on original station observation information.
+    """
     def __init__(self, args, num_classes):
         super().__init__()
         self.args = args
@@ -18,6 +19,9 @@ class ClassificationStat(nn.Module):
         self.reference = args.reference
 
     def get_stat(self, preds, targets, mode):
+        """
+        Get predictions and labels for original station observations.
+        """
         if mode == 'train':
             _, pred_labels = preds.topk(1, dim=1, largest=True, sorted=True)
             b = pred_labels.shape[0]
@@ -62,10 +66,11 @@ class CrossEntropyLoss(ClassificationStat):
 
     def forward(self, preds, targets, target_time, mode):
         """
-        <Parameter>
-        preds [torch.tensor]: NCHW format (N: batch size, C: class num)
-        targets [torch.tensor]:  NHW format (same as preds)
-        target_time [np.ndarray]: datetime of current target ([year, month, day, hour])
+        :param preds: model predictions in B x C x W x H format (batch size, channels, width, height)
+        :param targets: targets in B x W x H format
+        :param target_time:
+        :param mode:
+        :return:
         """
         if self.model_name == 'unet' or 'metnet':
             assert preds.shape[0] == targets.shape[0] and preds.shape[2] == targets.shape[1] and preds.shape[3] == \

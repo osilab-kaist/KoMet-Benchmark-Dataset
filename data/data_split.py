@@ -7,6 +7,10 @@ from data.dataset import StandardDataset
 
 
 def interval_split(dataset: StandardDataset, date_intervals):
+    """
+    Split the dataset into multiple `Subset`s according to the specified date_intervals.
+    The number of subsets will be `len(date_intervals)`.
+    """
     split_indices: List[List[int]] = [list() for _ in date_intervals]  # list of empty lists
     for i, target_timestamps in enumerate(dataset.target_timestamps):
         target_origin = target_timestamps[0]
@@ -24,6 +28,21 @@ def interval_split(dataset: StandardDataset, date_intervals):
 
 
 def cyclic_split(dataset: StandardDataset, split_days=(4, 2, 2), cycle_start_delta=0):
+    """
+    Split the dataset into multiple `Subset`s according to the default split protocol of KoMet.
+    E.g., for `split_days=(4, 2, 2)`, the data is split in the following manner:
+
+    Train:          Validation:      Test:
+    - 7/1/2021      - 7/5/2021       - 7/7/2021
+    - 7/2/2021      - 7/6/2021       - 7/8/2021
+    - 7/3/2021      - 7/11/2021      - 7/13/2021
+    - 7/4/2021      - 7/12/2021      - 7/14/2021
+    - 7/9/2021      - ...            - ...
+    - 7/10/2021
+    - ...
+
+    The cycle begins at `datetime(year=1970, month=1, day=1) + timedelta(days=cycle_start_delta)`.
+    """
     cycle_start_day = datetime(year=1970, month=1, day=1) + timedelta(days=cycle_start_delta)
     cycle_length = sum(split_days)
     split_indices = [list() for _ in split_days]  # list of empty lists

@@ -27,7 +27,7 @@ except ImportError:
 
 __all__ = ['NIMSStat', 'parse_args', 'set_device', 'fix_seed',
            'set_model', 'set_optimizer', 'get_experiment_name', 'get_min_max_values',
-           'list_experiments', 'get_experiments', 'select_experiment', 'parse_date', 'PROJECT_ROOT',
+           'get_experiments', 'parse_date', 'PROJECT_ROOT',
            'save_evaluation_results_for_args', 'load_dataset_from_args']
 
 NIMSStat = namedtuple('NIMSStat', 'acc, csi, pod, far, f1, bias')
@@ -125,18 +125,6 @@ def parse_args(manual_input=None):
     sampling.add_argument('--target_precipitation', default="rain", type=str,
                           help="rain_ratio target class for binary classification")
 
-    # augmentation = parser.add_argument_group('augmentation')
-    # augmentation.add_argument('--aug_method', default=None, type=str, help='which method to use (mixup, add_noise)')
-    # augmentation.add_argument('--num_aug_data', default=100, type=int, help='number of augmented data points')
-    # augmentation.add_argument('--aug_rain_threshold', default=10.0, type=float,
-    #                           help='threshold for filtering augmentation dataset')
-    # augmentation.add_argument('--aug_rain_cnt_threshold', default=10, type=int,
-    #                           help='number of points threshold for filtering augmentation dataset')
-
-    # augmentation.add_argument('--aug_noise_scale', default=0.01, type=float,
-    #                           help='noise scale for add_noise data augmentation')
-    # augmentation.add_argument('--add_nose_transform', action='store_true', help='add gaussian noise to every input')
-
     nc_gen = parser.add_argument_group('nc_gen')
     common.add_argument('--realtime', default=False, action="store_true", help="For realtime output")
     nc_gen.add_argument('--date', default=None, type=str, help='Date for netCDF file')
@@ -195,6 +183,10 @@ def load_dataset_from_args(args, **kwargs):
 
 
 def generate_evaluation_summary(confusion: np.ndarray, metrics_by_threshold: Dict[float, pd.DataFrame], loss=None):
+    """
+    Generate string summary of evaluation results.
+    Refer to `evaluations/evaluate.py` and `notebooks/evaluation_example.ipynb` for details.
+    """
     accuracy = confusion[np.diag_indices_from(confusion)].sum() / confusion.sum()
     fmt = '{:20s} {:>7.4f}     '
 
@@ -217,6 +209,11 @@ def generate_evaluation_summary(confusion: np.ndarray, metrics_by_threshold: Dic
 
 def save_evaluation_results_for_args(confusion: np.ndarray, metrics_by_threshold: Dict[float, pd.DataFrame], epoch,
                                      args, subset='train', loss=None, verbose=True) -> str:
+    """
+    (Convenience method)
+    Save evaluation results to the appropriate paths based on the supplied arguments.
+    Refer to `evaluations/evaluate.py` and `notebooks/evaluation_example.ipynb` for details.
+    """
     saved_paths = []
 
     # Save confusion matrix
@@ -264,6 +261,11 @@ def set_device(args):
 
 def set_model(sample, device, args,
               experiment_name=None, finetune=False, model_path=None):
+    """
+    (Convenience method)
+    Load appropriate loss function and model based on the supplied arguments.
+    :return:
+    """
     # Create a model and criterion
     if args.model == 'unet':
         model = UNet(input_data=args.input_data,
@@ -376,14 +378,14 @@ def get_experiment_name(args):
 
 
 def _get_min_max_values(dataset, indices, queue=None):
-    '''
-        Return min and max values of ldaps_inputs in train
-            Args : train_dataset
-                (nwp_input, gt, target_time_tensor = train_dataset[i])
-            Returns :
-                max_values : max_values [features, ]
-                min_values : min_values [features, ]
-    '''
+    """
+    Return variable-wise min and max values from subset of NWP dataset specified by `indices`.
+        Args : train_dataset
+            (nwp_input, gt, target_time_tensor = train_dataset[i])
+        Returns :
+            max_values : max_values [features, ]
+            min_values : min_values [features, ]
+    """
 
     max_values = None
     min_values = None
@@ -417,6 +419,9 @@ def _get_min_max_values(dataset, indices, queue=None):
 
 
 def get_min_max_values(dataset):
+    """
+    Return variable-wise min and max values from NWP dataset.
+    """
     # Make indices list
     indices = list(range(len(dataset)))
 
@@ -507,41 +512,14 @@ def get_experiments() -> List[Tuple[str, datetime]]:
     return experiments
 
 
-def list_experiments(experiments: List[Tuple[str, datetime]] = None):
-    if experiments is None:
-        experiments = get_experiments()
-
-    print('-' * 100)
-    print('{:4s}  {:19s}  {}'.format('Idx', 'Last Modified', 'Experiment'))
-    print('-' * 100)
-    for i, (name, modified) in enumerate(experiments):
-        path_date = modified.strftime('%Y/%m/%d %H:%M:%S')
-        print('{:>4d}  {:s}  {}'.format(i + 1, path_date, name))
-
-
-def select_experiment() -> str:
-    experiments = get_experiments()
-
-    print('Which experiment do you like to test?'.center(50).center(100, '='))
-    list_experiments(experiments)
-
-    while True:
-        try:
-            choice = int(input('\n> '))
-            name, modified = experiments[choice - 1]
-            return name
-        except (IndexError, ValueError):
-            print('Invalid choice. Try again.')
-
-
 def parse_date(date_string: str, end: bool) -> datetime:
     """
-    날짜 string을 parse합니다. 다음과 같은 형태를 지원합니다.
+    Parse dates from strings. The following formats are supported.
 
     - 20-08 -> 2020/08/01 00:00
     - 20-08-15 -> 2020/08/15 00:00
 
-    end=True일 경우, YY-MM 형태로 입력이 들어오면 그 달의 마지막 일자 선택됩니다.
+    If end=True and the format is YY-MM, the last day of that month is selected.
 
     - 2020-08 -> 2020/08/31 00:00
     - 2020-08-15 -> 2020/08/15 00:00

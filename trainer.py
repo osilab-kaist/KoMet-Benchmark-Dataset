@@ -16,6 +16,9 @@ __all__ = ['NIMSTrainer']
 
 
 class NIMSTrainer:
+    """
+    Provides functionality regarding training including save/loading models and experiment configurations.
+    """
     def __init__(self, model, criterion, dice_criterion, optimizer, scheduler, device, train_loader, valid_loader, test_loader,
                  experiment_name, args, normalization=None):
         self.args = args
@@ -85,6 +88,9 @@ class NIMSTrainer:
         self.history_path = get_train_log_history_path(self.experiment_name, makedirs=True)
 
     def save_trained_weight(self, epoch: int = None, step: int = None):
+        """
+        Save trained weights and experiment configurations to appropriate path.
+        """
         if sum([epoch is not None, step is not None]) != 1:
             raise ValueError('Only one of `epoch` or `step` must be specified to save model')
         trained_weight_path = get_trained_model_path(self.experiment_name, epoch=epoch, step=step, makedirs=True)
@@ -93,6 +99,9 @@ class NIMSTrainer:
         torch.save(self.trained_weight, trained_weight_path)
 
     def train(self):
+        """
+        Train the model by `self.num_epochs`.
+        """
         self.model.train()
 
         for epoch in range(1, self.num_epochs + 1):
@@ -160,9 +169,9 @@ class NIMSTrainer:
 
     def _epoch(self, data_loader, mode):
         """
+        Run a single epoch of inference or training (`mode="train"`) based on the supplied `mode`.
         :param data_loader:
-        :param mode:
-        :return:
+        :param mode: "train" | "eval"
         """
         pbar = tqdm(data_loader)
         total_loss = 0
@@ -178,6 +187,7 @@ class NIMSTrainer:
                 lead_time = e[4].item()
                 timestamps.append((origin, lead_time))
 
+            # Apply normalizations
             if self.normalization:
                 with torch.no_grad():
                     for i, (max_val, min_val) in enumerate(zip(self.normalization['max_values'],
@@ -191,7 +201,7 @@ class NIMSTrainer:
             target = target.type(torch.LongTensor).to(self.device)
             output = self.model(images, t)
 
-            # Note, pred_labels will be removed soon
+            # Obtain predictions and compute evaluation metrics
             loss, pred_labels, target_labels = self.criterion(output, target, timestamps, mode=mode)
             if self.dice_criterion !=None:
                 loss += self.dice_criterion(pred_labels, target_labels, self.device)
@@ -208,11 +218,13 @@ class NIMSTrainer:
             total_loss += loss.item() * images.shape[0]
             total_samples += images.shape[0]
 
+            # Apply backprop
             if mode == 'train':
                 self.optimizer.zero_grad()
                 loss.backward()
                 self.optimizer.step()
 
+        # Collate evaluation results
         metrics_by_threshold = {t: pd.concat(metrics) for t, metrics in metrics_by_threshold.items()}
         average_loss = total_loss / total_samples
 

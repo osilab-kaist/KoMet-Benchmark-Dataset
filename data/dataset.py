@@ -1,14 +1,16 @@
-from collections import Iterable
+try:
+    from collections.abc import Iterable
+except ImportError:
+    from collections import Iterable
 from datetime import datetime, timedelta
 from typing import List, Tuple, Type, Union
 
 import numpy as np
 import torch
+from data.base_dataset import *
 from torch.utils.data import Dataset
 
-from data.base_dataset import *
-
-__all__ = ['StandardDataset', 'GdapsKimDataset', 'GdapsUmDataset', 'get_dataset_class']
+__all__ = ['StandardDataset', 'GdapsKimDataset', 'get_dataset_class']
 
 
 class StandardDataset(Dataset):
@@ -121,15 +123,8 @@ class GdapsKimDataset(StandardDataset):
     aws_base_dataset_class = AwsBaseDatasetForGdapsKim
 
 
-class GdapsUmDataset(StandardDataset):
-    nwp_base_dataset_class = GdapsUmBaseDataset
-    aws_base_dataset_class = AwsBaseDatasetForGdapsUm
-
-
 DATASET_CLASSES = {
-    # 'ldaps': None,  # not implemented
     'gdaps_kim': GdapsKimDataset,
-    'gdaps_um': GdapsUmDataset,
 }
 
 
