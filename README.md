@@ -4,16 +4,15 @@
 
 # 🌧 KoMet-Benchmark-Dataset
 
-
 > Benchmark Dataset for Precipitation Forecasting by Post-Processing the Numerical Weather Prediction
 
-This repository contains the data and code to reproduce all the analyses in the paper ([Link](https://arxiv.org/abs/2206.15241)). If you need something immediately
-or find it confusing, please open a GitHub issue or email us. We recommend reading the paper, appendix, and below
-descriptions thoroughly before running the code. Future code modifications and official developments will take place
-here.
+This repository contains the data and code to reproduce all the analyses in the paper ([link](https://arxiv.org/abs/2206.15241)).
+If you need something immediately or find it confusing, please open a GitHub issue or email us. We recommend reading the paper,
+appendix, and below descriptions thoroughly before running the code. Future code modifications and official developments will
+take place here.
 
-Paper: *"Benchmark Dataset for Precipitation Forecasting by
-Post-Processing the Numerical Weather Prediction."*, under review in the NeurIPS 22 Benchmark Dataset Track
+Paper: *"Benchmark Dataset for Precipitation Forecasting by Post-Processing the Numerical Weather Prediction."*,
+under review in the NeurIPS 22 Benchmark Dataset Track
 
 # 📔️ Overview
 
@@ -34,11 +33,11 @@ labels.
 The KoMet dataset has records from **July 1st to August 31st of 2020 and 2021**. Due to the seasonal characteristics of
 Korea, the frequency of rainfall is intensive in summer (i.e., from July to August), while it rarely rains in other
 seasons. Specifically, GDAPS-KIM included in our dataset contains daily predictions executed at 00:00 UTC leading up to
-87 hours in the future, containing 17 atmospheric variables, consisting of 5 Pres variables at 22 different isobraic
-surfaces, and 12 Unis variables. All values are real-numbered and provided in double precision floating point format,
-following the source data. AWS is provided with all available hourly precipitation data for the specified period. More
-precisely, for each year, observations are included until September 3rd, 14:00 UTC, which corresponds to the final
-GDAPS-KIM outputs made on August 31st 00:00 UTC with lead time of 87 hours. We provide detailed information on the
+89 hours in the future, containing 122 geographic/atmospheric variables, consisting of 5 Pres variables at 22 different isobraic
+surfaces, and 12 Unis variables. All values are real-numbered and provided in single-precision floating point format,
+following the source data. We provide hourly AWS observations for all hours at which GDAPS-KIM predictions are provided.
+More precisely, for each year, observations are included until September 3rd, 17:00 UTC, which corresponds to the final
+GDAPS-KIM predictions made on August 31st 00:00 UTC with lead time of 89 hours. We provide detailed information on the
 atmospheric variables as well as data sources in the paper.
 
 ## 🔢 Data Interface (for Models)
@@ -71,12 +70,12 @@ following standard PyTorch split functions.
 ## 📁 Dataset Download
 
 1. Download `.tar.gz` files from the following Dropbox folder: https://www.dropbox.com/sh/vbme8g8wtx9pitg/AAAB4o6_GhRq0wMc1JxdXFrVa?dl=0
-2. Create folder `nims/` and `nims/GDPS_KIM`
-3. Unzip tar files as follows:
+2. Create directories `nims/` and `nims/GDPS_KIM/`
+3. Unzip tar files
   - Unzip `AWS.tar.gz` into `nims/`
-  - Unzip `GDAPS_KIM_*.tar.gz` archives into `/nims/GDPS_KIM`
+  - Unzip `GDAPS_KIM_*.tar.gz` into `/nims/GDPS_KIM/`
 
-The resulting `nims/` dataset folder should contain the follow:
+The resulting `nims/` dataset folder should contain the following:
 
 ```
 ├── AWS/
