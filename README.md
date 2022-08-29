@@ -1,4 +1,9 @@
+## 📣 KoMet.v1.1
+
+> **We have updated the dataset to include data from 9/21/2020 to 6/20/2021. Download instructions are up now, and statistics will be updated shortly.**
+
 # 🌧 KoMet-Benchmark-Dataset
+
 
 > Benchmark Dataset for Precipitation Forecasting by Post-Processing the Numerical Weather Prediction
 
@@ -65,13 +70,28 @@ following standard PyTorch split functions.
 
 ## 📁 Dataset Download
 
-```bash
-wget https://www.dropbox.com/s/qachyygl2ouuy1v/KoMet.v1.0.tar.gz?dl=0
-mkdir nims
-tar -xf KoMet.v1.0.tar.gz -C nims/
+1. Download `.tar.gz` files from the following Dropbox folder: https://www.dropbox.com/sh/vbme8g8wtx9pitg/AAAB4o6_GhRq0wMc1JxdXFrVa?dl=0
+2. Create folder `nims/` and `nims/GDPS_KIM`
+3. Unzip tar files as follows:
+  - Unzip `AWS.tar.gz` into `nims/`
+  - Unzip `GDAPS_KIM_*.tar.gz` archives into `/nims/GDPS_KIM`
+
+The resulting `nims/` dataset folder should contain the follow:
+
+```
+├── AWS/
+│  ├── 2020/
+│  └── 2021/
+├── AWS_GDPS_KIM_GRID/
+│  ├── 2020/
+│  └── 2021/
+├── GDPS_KIM/
+│  ├── 202007/
+│  ├── 202008/
+│  ├── ...
 ```
 
-Following this, move the `nims/` directory to `/data/nims/` to use the training scripts as-is. If you are unable to
+Finally, move the `nims/` directory to `/data/nims/` to use the training scripts as-is. If you are unable to
 create or access the `/data` directory, you may specify a custom location using the `--dataset_dir` argument. Refer to
 `parse_args()` in `utils.py`.
 
